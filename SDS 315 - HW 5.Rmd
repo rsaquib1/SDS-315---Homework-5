@@ -1,0 +1,133 @@
+---
+title: "SDS 315 - HW 5"
+output: html_document
+date: "2024-02-28"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, message=FALSE}
+library(ggplot2)
+library(mosaic)
+library(tidyverse)
+```
+# Problem 1
+
+### Null Hypothesis:
+Securities trades from the Iron Bank are flagged at the same 2.4% baseline rate as that of other traders
+
+### Test Statistic 
+.Our test statistic is the number of flagged trades. Higher numbers of trades mean stronger evidence against the null hypothesis. In our data, 70 of 2021  trades by Iron Bank employees were flagged.
+
+### Plot of the Probability Distribution of the Test Statistic,
+```{r echo=FALSE, message=FALSE}
+sim_trade = do(100000)*nflip(n=2021, prob=0.024)
+ggplot(sim_trade) + 
+  geom_histogram(aes(x=nflip),binwidth = 1, color = 'black', fill = 'pink')+ labs(title = "Distribution of Flagged Trades Under Null Hypothesis",
+       x = "Number of Flagged Trades",
+       y = "Frequency") + theme_minimal()
+```
+
+### P- Value
+```{r echo=FALSE, message=FALSE}
+p_val <- sum(sim_trade >= 70)/100000
+print(paste("The p value is", p_val))
+```
+
+### Conclusion
+The observed p-value of 0.00197; being below the significance level of 0.05, provides evidence to reject the null hypothesis, indicating that securities trades from the Iron Bank are flagged at a rate significantly higher than the 2.4% baseline, potentially violating federal 'insider trading' laws.
+
+# Problem 2
+
+### Null Hypothesis:
+On average, restaurants in the city are cited for health code violations at the same 3% baseline rate.
+
+### Test Statistic 
+Our test statistic is the number of health code violations. Higher numbers health code violations mean stronger evidence against the null hypothesis. In our data, 8 health code violations out of the 50 inspections in Gourmet Bite chain restaurants.  
+
+
+### Plot of the Probability Distribution of the Test Statistic,
+```{r echo=FALSE, message=FALSE}
+sim_food = do(100000)*nflip(n=50, prob=0.03)
+ggplot(sim_food) + 
+  geom_histogram(aes(x=nflip),binwidth = 1, color = 'black', fill = 'lightsalmon')+ labs(title = "Distribution of Health Code Violations Under Null Hypothesis",
+       x = "Number of Health Code Violations",
+       y = "Frequency") + theme_minimal()
+```
+
+### P- Value
+```{r echo=FALSE, message=FALSE}
+p_value <- sum(sim_food >= 8)/100000
+print(paste("The p value is", p_value))
+```
+
+### Conclusion
+
+The observed p-value of 0.00013 is below the significance level of 0.05 and .01, strongly supports rejecting the null hypothesis; based off of Gourmet Bites' chained restaurants, the rate of health code violations is higher than the 3% baseline for the entire city, needing further investigation by the Health Department.
+
+# Problem 3
+
+## Part A
+```{r echo=FALSE, message=FALSE}
+sentences <- readLines("brown_sentences.txt")
+letters <- read.csv('letter_frequencies.csv')
+calculate_chi_squared = function(sentence, freq_table) {
+  
+  # Ensure letter frequencies are normalized and sum to 1
+  freq_table$Probability = freq_table$Probability / sum(freq_table$Probability)
+  
+  # Remove non-letters and convert to uppercase
+  clean_sentence = gsub("[^A-Za-z]", "", sentence)
+  clean_sentence = toupper(clean_sentence)
+  
+  # Count the occurrences of each letter in the sentence
+  observed_counts = table(factor(strsplit(clean_sentence, "")[[1]], levels = freq_table$Letter))
+  
+  # Calculate expected counts
+  total_letters = sum(observed_counts)
+  expected_counts = total_letters * freq_table$Probability
+  
+  # Chi-squared statistic
+  chi_squared_stat = sum((observed_counts - expected_counts)^2 / expected_counts)
+  
+  return(chi_squared_stat)
+}
+chi_squared <- numeric(length(sentences))
+for (i in 1:length(sentences)) {
+  chi_squared[i] <- calculate_chi_squared(sentences[i], letters)  
+}
+hist(chi_squared, main = "Null Distribution of Chi-Squared Statistics",
+     xlab = "Chi-Squared Value of Brown", ylab = "Frequency", col = "lightblue")
+```
+
+## Part B
+```{r echo=FALSE, message=FALSE}
+sentences <- c(
+  "She opened the book and started to read the first chapter, eagerly anticipating what might come next.",
+  "Despite the heavy rain, they decided to go for a long walk in the park, crossing the main avenue by the fountain in the center.",
+  "The museum’s new exhibit features ancient artifacts from various civilizations around the world.",
+  "He carefully examined the document, looking for any clues that might help solve the mystery.",
+  "The students gathered in the auditorium to listen to the guest speaker’s inspiring lecture.",
+  "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.",
+  "The chef demonstrated how to prepare a delicious meal using only locally sourced ingredients, focusing mainly on some excellent dinner recipes from Spain.",
+  "They watched the sunset from the hilltop, marveling at the beautiful array of colors in the sky.",
+  "The committee reviewed the proposal and provided many points of useful feedback to improve the project’s effectiveness.",
+  "Despite the challenges faced during the project, the team worked tirelessly to ensure its successful completion, resulting in a product that exceeded everyone’s expectations."
+)
+
+values <- c()
+
+for (i in 1:length(sentences)) {
+  values[i] <- round((sum(1 * (chi_squared >= calculate_chi_squared(sentences[i], letters))) / length(chi_squared)), 3)
+}
+
+
+sentence_tibble <- tibble(Sentence = sentences, P_Value = values)
+print(sentence_tibble)
+
+```
+
+### Description:
+The 6th sentence is the one produce by LLM because it has the smallest P-value of about .009.
